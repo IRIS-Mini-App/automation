@@ -57,14 +57,14 @@ from test_settings import (
     EMULATOR_BOOT_TIMEOUT
 )
 
-print(">>> [DEBUG] conftest.py LOADED <<<")
+logger.debug("conftest.py LOADED")
 
 def check_emulator():
     """Check if emulator is running, if not start it"""    
     # Check if emulator is running
     result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
     if DEVICE_NAME not in result.stdout:
-        print(f">>> [DEBUG] Starting emulator {AVD_NAME}...")
+        logger.debug(f"Starting emulator {AVD_NAME}...")
         # Start emulator in background
         subprocess.Popen(['emulator', '-avd', AVD_NAME, '-no-snapshot-load'])
         
@@ -73,13 +73,13 @@ def check_emulator():
         while time.time() - start_time < EMULATOR_BOOT_TIMEOUT:
             result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
             if DEVICE_NAME in result.stdout:
-                print(">>> [DEBUG] Emulator is ready")
+                logger.debug("Emulator is ready")
                 time.sleep(5)  # Wait a bit more for full boot
                 return True
             time.sleep(2)
         raise Exception(f"Timeout waiting for emulator {AVD_NAME} to start after {EMULATOR_BOOT_TIMEOUT}s")
     else:
-        print(f">>> [DEBUG] Emulator {DEVICE_NAME} is already running")
+        logger.debug(f"Emulator {DEVICE_NAME} is already running")
     return True
 
 @pytest.fixture(scope="session", autouse=True)
@@ -180,38 +180,38 @@ def format_duration(seconds: float) -> str:
 @pytest.fixture
 def driver(handle_appium_server):
     """Create and return a WebDriver instance for each test"""
-    print("\n>>> [DEBUG] driver fixture STARTING")
+    logger.debug("driver fixture STARTING")
     driver = create_driver()
     yield driver
-    print("\n>>> [DEBUG] driver fixture CLEANING UP")
+    logger.debug("driver fixture CLEANING UP")
     if driver:
         driver.quit()
 
 @pytest.fixture(scope="session", autouse=True)
 def handle_appium_server(request):
-    print("\n>>> [DEBUG] handle_appium_server fixture STARTING")
+    logger.debug("handle_appium_server fixture STARTING")
     # Ensure emulator is running
     check_emulator()
     
     # Start Appium server
     start_appium()
-    print(">>> [DEBUG] handle_appium_server fixture STARTED")
+    logger.debug("handle_appium_server fixture STARTED")
     
     # Cleanup after all tests
     def cleanup():
-        print("\n>>> [DEBUG] handle_appium_server fixture CLEANING UP")
+        logger.debug("handle_appium_server fixture CLEANING UP")
         stop_appium()
-        print(">>> [DEBUG] handle_appium_server fixture CLEANED UP")
+        logger.debug("handle_appium_server fixture CLEANED UP")
         
     request.addfinalizer(cleanup)
 
 @pytest.fixture
 def driver(handle_appium_server):
     """Create and return a driver instance."""
-    print("\n>>> [DEBUG] driver fixture STARTING")
+    logger.debug("driver fixture STARTING")
     driver = create_driver()
     yield driver
-    print("\n>>> [DEBUG] driver fixture CLEANING UP")
+    logger.debug("driver fixture CLEANING UP")
     if driver:
         driver.quit()
     try:
@@ -220,9 +220,9 @@ def driver(handle_appium_server):
         
         # Start Appium server
         start_appium()
-        print(">>> [DEBUG] handle_appium_server fixture STARTED")
+        logger.debug("handle_appium_server fixture STARTED")
     except Exception as e:
-        print(f">>> [ERROR] Failed to setup test environment: {e}")
+        logger.error(f"Failed to setup test environment: {e}")
         raise
 
 @pytest.fixture
@@ -233,20 +233,20 @@ def driver(handle_appium_server, request):
         driver = create_driver()
         
         def cleanup():
-            print("\n>>> [DEBUG] handle_appium_server fixture CLEANING UP")
+            logger.debug("handle_appium_server fixture CLEANING UP")
             try:
                 if driver:
                     driver.quit()
                 stop_appium()
-                print(">>> [DEBUG] handle_appium_server fixture CLEANED UP")
+                logger.debug("handle_appium_server fixture CLEANED UP")
             except Exception as e:
-                print(f">>> [ERROR] Failed to stop Appium: {e}")
+                logger.error(f"Failed to stop Appium: {e}")
                 raise
         
         request.addfinalizer(cleanup)
         return driver
     except Exception as e:
-        print(f">>> [ERROR] Failed to setup test environment: {e}")
+        logger.error(f"Failed to setup test environment: {e}")
         raise
 
 @pytest.fixture(scope="function")
