@@ -2,8 +2,6 @@
 
 import os
 import subprocess
-import time
-from typing import Dict
 
 from appium import webdriver
 from appium.options.android import UiAutomator2Options

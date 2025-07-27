@@ -2,7 +2,6 @@
 
 import subprocess
 import time
-from typing import Union, List
 
 from utils.logger import logger
 from test_settings import (
@@ -78,6 +77,6 @@ def format_duration(seconds: float) -> str:
     
     if h > 0:
         return f"{h}h {m}m {s:.2f}s"
-    elif m > 0:
+    if m > 0:
         return f"{m}m {s:.2f}s"
     return f"{s:.2f}s"

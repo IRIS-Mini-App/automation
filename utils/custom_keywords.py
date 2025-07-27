@@ -6,14 +6,13 @@ from appium.webdriver.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
-
 from utils.logger import logger
 
 LocatorType = Tuple[str, str]
 
 
-def wait_for_visible(driver: WebDriver, locator: LocatorType, timeout: int = 10, poll_frequency: float = 0.2) -> Optional[WebElement]:
+def wait_for_visible(driver: WebDriver, locator: LocatorType, 
+                   timeout: int = 10, poll_frequency: float = 0.2) -> Optional[WebElement]:
     """Wait for an element to be visible with fluent wait.
     
     Args:
@@ -73,4 +72,3 @@ def get_elements(driver: WebDriver, locator: LocatorType) -> List[WebElement]:
         
     logger.debug(f"Found {len(elements)} elements with locator: {locator}")
     return elements
-

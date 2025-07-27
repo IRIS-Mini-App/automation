@@ -77,7 +77,7 @@ def pytest_runtest_setup(item) -> None:
         item: PyTest item object representing the test
     """
     item.start_time = time.time()
-    logger.debug(f"Start test: {item.name}")
+    logger.info(f"Start test: {item.name}")
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_teardown(item) -> None:
@@ -88,5 +88,5 @@ def pytest_runtest_teardown(item) -> None:
     start_time = getattr(item, 'start_time', None)
     if start_time:
         duration = time.time() - start_time
-        logger.debug(f"End test: {item.name}")
-        logger.debug(f"Total duration: {format_duration(duration)}")
+        logger.info(f"End test: {item.name}")
+        logger.info(f"Total duration: {format_duration(duration)}")

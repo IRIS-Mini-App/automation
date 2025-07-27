@@ -17,7 +17,25 @@ from test_settings import (
 )
 from utils.logger import logger
 
-_appium_process: Optional[subprocess.Popen] = None
+
+class AppiumServer:
+    """Class for managing Appium server lifecycle."""
+    
+    def __init__(self):
+        """Initialize AppiumServer instance."""
+        self.process: Optional[subprocess.Popen] = None
+        
+    def get_process(self) -> Optional[subprocess.Popen]:
+        """Get current Appium process."""
+        return self.process
+        
+    def set_process(self, process: Optional[subprocess.Popen]) -> None:
+        """Set current Appium process."""
+        self.process = process
+
+
+# Global instance of AppiumServer
+appium_server = AppiumServer()
 
 
 def kill_existing_appium() -> None:
@@ -96,14 +114,13 @@ def start_appium() -> None:
     Raises:
         Exception: If server fails to start or respond
     """
-    global _appium_process
     logger.debug("Starting Appium server...")
     
     # Kill any existing Appium process
     kill_existing_appium()
     logger.debug("Cleaned up existing Appium processes")
     
-    if _appium_process:
+    if appium_server.get_process():
         logger.debug("Stopping existing Appium server...")
         stop_appium()
     
@@ -118,7 +135,7 @@ def start_appium() -> None:
         logger.debug(f"Launch command: {launch_cmd}")
         
         logger.debug("Creating Appium process...")
-        _appium_process = subprocess.Popen(
+        process = subprocess.Popen(
             launch_cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -126,17 +143,18 @@ def start_appium() -> None:
             universal_newlines=True,  
             bufsize=1  
         )
+        appium_server.set_process(process)
         
-        if _appium_process and _appium_process.pid:
-            logger.debug(f"Appium process created with PID: {_appium_process.pid}")
+        if process and process.pid:
+            logger.debug(f"Appium process created with PID: {process.pid}")
         
         logger.debug("Waiting for Appium process to stabilize...")
         
         def log_output() -> None:
             """Log Appium server output in background thread."""
-            while _appium_process and _appium_process.stdout:
-                line = _appium_process.stdout.readline()
-                if not line and _appium_process.poll() is not None:
+            while process and process.stdout:
+                line = process.stdout.readline()
+                if not line and process.poll() is not None:
                     break
                 if line:
                     logger.debug(f"[APPIUM] {line.strip()}")
@@ -146,8 +164,8 @@ def start_appium() -> None:
         
         time.sleep(5)  # Allow process to stabilize
         
-        if _appium_process.poll() is not None:
-            stdout, stderr = _appium_process.communicate()
+        if process.poll() is not None:
+            stdout, stderr = process.communicate()
             logger.error(f"Appium STDOUT: {stdout.decode(errors='ignore')}")
             logger.error(f"Appium STDERR: {stderr.decode(errors='ignore')}")
             raise Exception("Appium crashed immediately after starting")
@@ -166,14 +184,15 @@ def start_appium() -> None:
             
     except Exception as e:
         logger.error(f"Failed to start Appium: {str(e)}")
-        if _appium_process:
-            _appium_process.kill()
+        if appium_server.get_process():
+            appium_server.get_process().kill()
         raise
 
 def stop_appium() -> None:
     """Stop the running Appium server gracefully."""
-    global _appium_process
-    if _appium_process:
+    process = appium_server.get_process()
+    if process:
         logger.debug("Stopping Appium server...")
-        os.kill(_appium_process.pid, signal.SIGTERM)
+        os.kill(process.pid, signal.SIGTERM)
+        appium_server.set_process(None)
         logger.debug("Appium server stopped")
