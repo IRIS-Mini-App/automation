@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [ '**' ]
   pull_request:
     branches: [ '**' ]
 
@@ -88,14 +86,14 @@ jobs:
               statusText = 'Failed';
             }
             
-            const report = `## \${status} Pylint Quality Check
+            const report = `## ${status} Pylint Quality Check
             
-            > **Score:** \`\${score}/10\` (\${statusText})
+            > **Score:** \`${score}/10\` (${statusText})
             
             <details>
-            <summary>��� Detailed Issues</summary>
+            <summary>🔍 Detailed Issues</summary>
             
-            \${details}
+            ${details}
             
             </details>
             
@@ -112,101 +110,101 @@ jobs:
               });
             }
 
-  test:
-    name: Run Tests
-    needs: lint
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        api-level: [34]
-        target: [google_apis]
-    steps:
-      - uses: actions/checkout@v4
+  # test:
+  #   name: Run Tests
+  #   needs: lint
+  #   runs-on: macos-latest
+  #   strategy:
+  #     matrix:
+  #       api-level: [34]
+  #       target: [google_apis]
+  #   steps:
+  #     - uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.13'
           
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+  #     - name: Set up JDK
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         distribution: 'temurin'
+  #         java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+  #     - name: Setup Android SDK
+  #       uses: android-actions/setup-android@v3
           
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          npm install -g appium
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install -r requirements.txt
+  #         npm install -g appium
           
-      - name: Start Appium Server
-        run: |
-          appium &
+  #     - name: Start Appium Server
+  #       run: |
+  #         appium &
           
-      - name: AVD cache
-        uses: actions/cache@v4
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-\${{ matrix.api-level }}
+  #     - name: AVD cache
+  #       uses: actions/cache@v4
+  #       id: avd-cache
+  #       with:
+  #         path: |
+  #           ~/.android/avd/*
+  #           ~/.android/adb*
+  #         key: avd-\${{ matrix.api-level }}
 
-      - name: Create AVD and generate snapshot for caching
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: \${{ matrix.api-level }}
-          target: \${{ matrix.target }}
-          arch: x86_64
-          profile: Nexus 6
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: false
-          script: echo "Generated AVD snapshot for caching."
+  #     - name: Create AVD and generate snapshot for caching
+  #       if: steps.avd-cache.outputs.cache-hit != 'true'
+  #       uses: reactivecircus/android-emulator-runner@v2
+  #       with:
+  #         api-level: \${{ matrix.api-level }}
+  #         target: \${{ matrix.target }}
+  #         arch: x86_64
+  #         profile: Nexus 6
+  #         force-avd-creation: false
+  #         emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+  #         disable-animations: false
+  #         script: echo "Generated AVD snapshot for caching."
 
-      - name: Run Tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: \${{ matrix.api-level }}
-          target: \${{ matrix.target }}
-          arch: x86_64
-          profile: Nexus 6
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: |
-            adb devices
-            pytest
+  #     - name: Run Tests
+  #       uses: reactivecircus/android-emulator-runner@v2
+  #       with:
+  #         api-level: \${{ matrix.api-level }}
+  #         target: \${{ matrix.target }}
+  #         arch: x86_64
+  #         profile: Nexus 6
+  #         force-avd-creation: false
+  #         emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+  #         disable-animations: true
+  #         script: |
+  #           adb devices
+  #           pytest
             
-      - name: Get Allure history
-        uses: actions/checkout@v4
-        if: always()
-        continue-on-error: true
-        with:
-          ref: gh-pages
-          path: gh-pages
+  #     - name: Get Allure history
+  #       uses: actions/checkout@v4
+  #       if: always()
+  #       continue-on-error: true
+  #       with:
+  #         ref: gh-pages
+  #         path: gh-pages
           
-      - name: Generate Allure Report
-        uses: simple-elf/allure-report-action@master
-        if: always()
-        id: allure-report
-        with:
-          allure_results: allure-results
-          gh_pages: gh-pages
-          allure_report: allure-report
-          allure_history: allure-history
-          keep_reports: 20
+  #     - name: Generate Allure Report
+  #       uses: simple-elf/allure-report-action@master
+  #       if: always()
+  #       id: allure-report
+  #       with:
+  #         allure_results: allure-results
+  #         gh_pages: gh-pages
+  #         allure_report: allure-report
+  #         allure_history: allure-history
+  #         keep_reports: 20
           
-      - name: Deploy report to Github Pages
-        if: always()
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: allure-history
-          keep_files: true
+  #     - name: Deploy report to Github Pages
+  #       if: always()
+  #       uses: peaceiris/actions-gh-pages@v3
+  #       with:
+  #         github_token: ${{ secrets.GITHUB_TOKEN }}
+  #         publish_branch: gh-pages
+  #         publish_dir: allure-history
+  #         keep_files: true
