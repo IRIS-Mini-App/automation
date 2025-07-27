@@ -57,12 +57,12 @@ jobs:
       if: github.event_name == 'pull_request'
       run: |
         {
-          echo "### Ì¥ç Pylint Analysis"
+          echo "### üîç Pylint Analysis"
           echo
           if [ -n "$LINT_FAILED" ]; then
             echo "#### ‚ùå Check Failed - Score: $PYLINT_SCORE/10"
             echo
-            echo "<details><summary>Ì≥ã Detailed Report</summary>"
+            echo "<details><summary>üìã Detailed Report</summary>"
             echo
             echo "\`\`\`"
             cat pylint_details.txt
@@ -70,7 +70,7 @@ jobs:
             echo
             echo "</details>"
             echo
-            echo "#### Ì¥ß How to fix:"
+            echo "#### üîß How to fix:"
             echo "1. Run pylint locally to see issues in real-time:"
             echo "   \`\`\`bash"
             echo "   pylint utils pages tests config conftest.py test_settings.py"
