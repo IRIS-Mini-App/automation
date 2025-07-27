@@ -2,5 +2,9 @@
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   "python.testing.pytestArgs": ["tests"],
-  "python.testing.autoTestDiscoverOnSaveEnabled": true
+  "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  "testing.automaticallyOpenPeekView": "never",
+  "python.testing.cwd": "${workspaceFolder}",
+  "testing.followRunningTest": false,
+  "testing.defaultGutterClickAction": "run"
 }

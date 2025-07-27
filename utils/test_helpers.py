@@ -54,7 +54,7 @@ def check_emulator() -> bool:
                     f"to start after {EMULATOR_BOOT_TIMEOUT}s"
                 )
         
-        logger.info(f"Found {len(devices)} connected device(s)")
+        logger.debug(f"Found {len(devices)} connected device(s)")
         for device in devices:
             logger.debug(f"Device: {device}")
         return True

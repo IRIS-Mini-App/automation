@@ -6,6 +6,7 @@ import time
 from typing import Dict
 
 from appium import webdriver
+from appium.options.android import UiAutomator2Options
 from appium.webdriver.webdriver import WebDriver
 from selenium.common.exceptions import WebDriverException
 
@@ -20,25 +21,25 @@ from test_settings import (
 )
 
 
-def get_capabilities(apk_path: str) -> Dict[str, str]:
-    """Get Appium desired capabilities configuration.
+def get_driver_options(apk_path: str) -> UiAutomator2Options:
+    """Get Appium driver options configuration.
     
     Args:
         apk_path: Full path to the APK file
         
     Returns:
-        Dictionary of Appium desired capabilities
+        UiAutomator2Options instance with configured capabilities
     """
-    return {
-        "platformName": "Android",
-        "appium:platformVersion": PLATFORM_VERSION,
-        "appium:deviceName": DEVICE_NAME,
-        "appium:app": apk_path,
-        "appium:automationName": "UiAutomator2",
-        "appium:newCommandTimeout": 120,
-        "appium:autoGrantPermissions": True,
-        "appium:adbExecTimeout": 120000
-    }
+    options = UiAutomator2Options()
+    options.platform_name = "Android"
+    options.platform_version = PLATFORM_VERSION
+    options.device_name = DEVICE_NAME
+    options.app = apk_path
+    options.automation_name = "UiAutomator2"
+    options.new_command_timeout = 120
+    options.auto_grant_permissions = True
+    options.adb_exec_timeout = 120000
+    return options
 
 
 def verify_device_connection() -> None:
@@ -75,14 +76,14 @@ def manage_app_installation(reinstall_app: bool) -> None:
         logger.debug(f"Uninstalling package: {PACKAGE_NAME}")
         try:
             subprocess.run(['adb', 'uninstall', PACKAGE_NAME], check=True)
-            logger.info(f"Successfully uninstalled {PACKAGE_NAME}")
+            logger.debug(f"Successfully uninstalled {PACKAGE_NAME}")
         except subprocess.CalledProcessError as e:
             logger.warning(f"Failed to uninstall {PACKAGE_NAME}: {e}")
     else:
         logger.debug(f"Clearing app data: {PACKAGE_NAME}")
         try:
             subprocess.run(['adb', 'shell', 'pm', 'clear', PACKAGE_NAME], check=True)
-            logger.info(f"Successfully cleared data for {PACKAGE_NAME}")
+            logger.debug(f"Successfully cleared data for {PACKAGE_NAME}")
         except subprocess.CalledProcessError as e:
             logger.warning(f"Failed to clear data for {PACKAGE_NAME}: {e}")
 
@@ -100,71 +101,24 @@ def create_driver(reinstall_app: bool = False) -> WebDriver:
         FileNotFoundError: If APK file is not found
         WebDriverException: If driver creation fails
     """
-    current_dir = os.getcwd()
-    apk_path = os.path.join(current_dir, "apks", APK_NAME)
-    logger.debug(f"APK path: {apk_path}")
-    
+    apk_path = os.path.join(os.getcwd(), 'apks', APK_NAME)
     if not os.path.exists(apk_path):
-        logger.error("APK not found in apks folder")
-        raise FileNotFoundError(f"APK file not found: {apk_path}")
+        raise FileNotFoundError(f"APK not found at {apk_path}")
+    
+    logger.debug(f"APK path: {apk_path}")
     
     verify_device_connection()
     manage_app_installation(reinstall_app)
     
-    capabilities = get_capabilities(apk_path)
-    appium_url = f"http://{APPIUM_HOST}:{APPIUM_PORT}"
-    
     try:
-        driver = webdriver.Remote(appium_url, capabilities)
-        logger.info("Successfully created Appium driver")
+        # Create driver with modern options approach
+        options = get_driver_options(apk_path)
+        driver = webdriver.Remote(
+            command_executor=f'http://{APPIUM_HOST}:{APPIUM_PORT}',
+            options=options
+        )
+        logger.debug("Successfully created Appium driver")
         return driver
     except WebDriverException as e:
-        logger.error(f"Failed to create Appium driver: {e}")
-        raise
-    
-    appium_url = f"http://{APPIUM_HOST}:{APPIUM_PORT}"
-    logger.info(f"Connecting to Appium server at {appium_url}")
-    
-    start_time = time.time()
-    while time.time() - start_time < 60:
-        try:
-            driver = WebDriver(
-                command_executor=appium_url,
-                desired_capabilities=capabilities
-            )
-            logger.info("WebDriver session started")
-            return driver
-        except Exception as e:
-            logger.debug(f"Session creation retry ({time.time() - start_time:.1f}s): {str(e)}")
-            time.sleep(5)
-            
-    package_name = "com.example.iris"  # Add the correct package name here
-    try:
-        if reinstall_app:
-            logger.info("Reinstalling application...")
-            driver.remove_app(package_name)
-            driver.install_app(apk_path)
-            logger.info("App reinstalled successfully")
-        else:
-            logger.info("Clearing application data...")
-            try:
-                driver.execute_script("mobile: shell", {
-                    "command": f"pm clear {package_name}"
-                })
-            except Exception:
-                logger.debug("Retrying clear after starting app...")
-                driver.start_activity(package_name, ".MainActivity")
-                driver.execute_script("mobile: shell", {
-                    "command": f"pm clear {package_name}"
-                })
-                logger.info("App data cleared successfully")
-
-        driver.start_activity(package_name, ".MainActivity")
-        return driver
-    except TimeoutError:
-        logger.error("WebDriver session creation timed out")
-        raise TimeoutError("Failed to create WebDriver session within 60s")
-        
-    except Exception as e:
-        logger.error(f"App preparation failed: {str(e)}")
+        logger.error(f"Failed to create driver: {e}")
         raise

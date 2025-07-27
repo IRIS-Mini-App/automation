@@ -97,7 +97,7 @@ def start_appium() -> None:
         Exception: If server fails to start or respond
     """
     global _appium_process
-    logger.info("Starting Appium server...")
+    logger.debug("Starting Appium server...")
     
     # Kill any existing Appium process
     kill_existing_appium()
@@ -174,6 +174,6 @@ def stop_appium() -> None:
     """Stop the running Appium server gracefully."""
     global _appium_process
     if _appium_process:
-        logger.info("Stopping Appium server...")
+        logger.debug("Stopping Appium server...")
         os.kill(_appium_process.pid, signal.SIGTERM)
-        logger.info("Appium server stopped")
+        logger.debug("Appium server stopped")

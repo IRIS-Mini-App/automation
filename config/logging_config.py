@@ -3,15 +3,17 @@
 import logging
 from typing import Dict, Final
 
+from test_settings import DEBUG_MODE
+
 
 class LogConfig:
     """Centralized logging configuration."""
     
-    # Standard environment log levels
-    CONSOLE_LOG_LEVEL: Final[int] = logging.WARNING
+    # Standard environment log levels (when DEBUG_MODE is False)
+    CONSOLE_LOG_LEVEL: Final[int] = logging.INFO
     FILE_LOG_LEVEL: Final[int] = logging.INFO
     
-    # Debug environment log levels  
+    # Debug environment log levels (when DEBUG_MODE is True)
     DEBUG_CONSOLE_LEVEL: Final[int] = logging.DEBUG
     DEBUG_FILE_LEVEL: Final[int] = logging.DEBUG
     
