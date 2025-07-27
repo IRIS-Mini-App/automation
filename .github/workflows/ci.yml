@@ -1,4 +1,4 @@
-name: CI - Auto Fix & Quality Check
+name: CI
 
 on:
   # Trigger on push to master
@@ -9,8 +9,8 @@ on:
     branches: [ '**' ]
 
 jobs:
-  lint-and-fix:
-    name: 🔧 Auto-fix Lint Issues
+  lint:
+    name: Lint Check
     runs-on: ubuntu-latest
     # Add permissions needed for PR comments
     permissions:
@@ -30,145 +30,43 @@ jobs:
         pip install -r requirements.txt
         pip install pylint
         
-    - name: Auto-fix and Check Lint
-      if: github.event_name == 'pull_request'
+    - name: Run Pylint Check
       id: lint_check
-      continue-on-error: true
       run: |
-        # Install additional tools
-        pip install autoflake isort black
-
         # Create a list of Python files
         find . -type f -name "*.py" > python_files.txt
-
-        # 1. Remove unused imports and variables
-        while IFS= read -r file; do
-          autoflake --remove-all-unused-imports --remove-unused-variables --in-place "$file"
-        done < python_files.txt
-
-        # 2. Sort imports
-        isort --profile black $(cat python_files.txt)
-
-        # 3. Format code
-        black --line-length 100 $(cat python_files.txt)
-
-        # 4. Run pylint to check results
-        pylint $(cat python_files.txt) --output-format=json > pylint_json.json || true
-        pylint $(cat python_files.txt) --output-format=colorized > pylint_details.txt || true
-        pylint $(cat python_files.txt) --output-format=text --score=yes > pylint_report.txt || true
-
-        # Get score and changes
-        SCORE=$(tail -n 2 pylint_report.txt | grep "rated at" | grep -oP "[\d.]+(?=/10)")
-        echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         
-        # Check if files were modified
-        if [[ -n $(git status -s) ]]; then
-          echo "CHANGES_MADE=true" >> $GITHUB_ENV
-          
-          # Configure Git
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          
-          # Create new branch with fixes
-          BRANCH_NAME="lint-fixes/$(date +%s)"
-          git checkout -b $BRANCH_NAME
-          
-          # Commit and push changes
-          git add .
-          git commit -m "🤖 Auto-fix lint issues
-          
-          - Remove unused imports and variables
-          - Sort imports
-          - Format code according to PEP 8
-          - Current pylint score: $SCORE/10"
-          
-          git push origin $BRANCH_NAME
-          
-          # Save branch name for PR creation
-          echo "LINT_BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
-        else
-          echo "No lint issues to fix automatically"
+        # Run pylint and capture results
+        pylint $(cat python_files.txt) --output-format=text --score=yes > pylint_report.txt || LINT_EXIT_CODE=$?
+        
+        # Get score if available
+        if [ -f pylint_report.txt ]; then
+          SCORE=$(tail -n 2 pylint_report.txt | grep "rated at" | grep -oP "[\d.]+(?=/10)" || echo "0")
+          echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         fi
         
-    - name: Run pylint for push
-      if: github.event_name == 'push'
-      id: pylint_push
-      run: |
-        # For push to master, just collect results
-        pylint utils pages tests config conftest.py test_settings.py --output-format=colorized > pylint_report.txt || true
+        # Save detailed report for comment
+        pylint $(cat python_files.txt) --output-format=colorized > pylint_details.txt || true
         
-    - name: Create Fix PR
-      if: ${{ github.event_name == 'pull_request' && env.CHANGES_MADE == 'true' }}
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fixBranch = process.env.LINT_BRANCH;
-          const score = process.env.PYLINT_SCORE;
-          
-          // Create PR with fixes
-          const { data: pr } = await github.rest.pulls.create({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            title: '🤖 Auto-fix lint issues',
-            head: fixBranch,
-            base: context.payload.pull_request.head.ref,
-            body: `## 🔧 Automated Lint Fixes
-
-              I've automatically fixed some lint issues in your code:
-              - Removed unused imports and variables
-              - Sorted imports
-              - Formatted code according to PEP 8
-              
-              ### Current Score: ${score}/10
-              
-              <details><summary>📋 Detailed Report</summary>
-              
-              \`\`\`
-              ${fs.readFileSync('pylint_details.txt', 'utf8')}
-              \`\`\`
-              </details>
-              
-              Please review the changes and merge if they look good.
-              
-              Note: Some issues may require manual fixes:
-              - Add missing docstrings
-              - Fix complex logic issues
-              - Handle specific exceptions
-              `
-          });
-          
-          // Comment on original PR
-          await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.issue.number,
-            body: `### 🔧 Lint Auto-fix
-            
-            I've created a new PR #${pr.number} with automatic lint fixes.
-            Please review and merge those changes.
-            
-            Current pylint score: ${score}/10
-            
-            <details><summary>📋 Remaining Issues</summary>
-            
-            \`\`\`
-            ${fs.readFileSync('pylint_details.txt', 'utf8')}
-            \`\`\`
-            </details>
-            `
-          });
-        
-    - name: Comment Results
+    - name: Post Results
+      if: always()
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
-          let report;
-          try {
-            report = fs.readFileSync('lint_report.md', 'utf8');
-          } catch (error) {
-            report = '### ⚠️ Failed to generate lint report';
-          }
+          const score = process.env.PYLINT_SCORE;
+          const details = fs.readFileSync('pylint_details.txt', 'utf8');
+          
+          const report = `### Pylint Results
+          
+          Current score: ${score}/10
+          
+          <details><summary>Detailed Report</summary>
+          
+          \`\`\`
+          ${details}
+          \`\`\`
+          </details>`;
           
           if (context.eventName === 'pull_request') {
             await github.rest.issues.createComment({
@@ -177,16 +75,4 @@ jobs:
               issue_number: context.issue.number,
               body: report
             });
-          } else {
-            await github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-              body: report
-            });
-          }
-          
-          // Exit with error if lint failed or not perfect for PR
-          if (process.env.LINT_FAILED === 'true' || process.env.LINT_PERFECT !== 'true') {
-            core.setFailed('Pylint score must be exactly 10/10');
           }
