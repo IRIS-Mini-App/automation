@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Pytest - test_valid_input_flow",
+      "type": "python",
+      "request": "launch",
+      "module": "pytest",
+      "justMyCode": false,
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "-s", // in được print()
+        "tests/test_recipe_input.py::test_valid_input_flow"
+      ]
+    }
+  ]
+}

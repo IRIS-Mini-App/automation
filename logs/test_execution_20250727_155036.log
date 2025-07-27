@@ -1,0 +1,3 @@
+2025-07-27 15:50:36 - INFO - [logger] - Starting Appium server...
+2025-07-27 15:50:41 - INFO - [logger] - Waiting for Appium server at http://127.0.0.1:4723/status
+2025-07-27 15:50:41 - INFO - [logger] - Appium server is ready

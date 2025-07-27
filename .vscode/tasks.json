@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Run Pytest",
+			"command": ".venv/Scripts/python.exe",
+			"args": [
+				"-m",
+				"pytest",
+				"-v"
+			],
+			"group": "test",
+			"problemMatcher": [],
+			"isBackground": false
+		}
+	]
+}
