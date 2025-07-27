@@ -43,16 +43,19 @@ jobs:
         SCORE=$(tail -n 2 pylint_report.txt | grep "rated at" | grep -oP "[\d.]+(?=/10)")
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         
-        # Convert score to float and compare with 10
-        if (( $(echo "$SCORE < 10.0" | bc -l) )); then
+        # Compare with 10.0 using bc for decimal comparison
+        if [ $(echo "$SCORE < 10.0" | bc -l) -eq 1 ]; then
           echo "LINT_FAILED=true" >> $GITHUB_ENV
+          echo "Score $SCORE is below 10.0"
+        elif [ $(echo "$SCORE > 10.0" | bc -l) -eq 1 ]; then
+          echo "LINT_FAILED=true" >> $GITHUB_ENV
+          echo "Score $SCORE is above 10.0"
+        elif [ $(echo "$SCORE == 10.0" | bc -l) -eq 1 ]; then
+          echo "LINT_PERFECT=true" >> $GITHUB_ENV
+          echo "Score is exactly 10.0"
         else
-          # Only if score is exactly 10.0
-          if (( $(echo "$SCORE == 10.0" | bc -l) )); then
-            echo "LINT_PERFECT=true" >> $GITHUB_ENV
-          else
-            echo "LINT_FAILED=true" >> $GITHUB_ENV
-          fi
+          echo "LINT_FAILED=true" >> $GITHUB_ENV
+          echo "Score comparison error"
         fi
         
     - name: Run pylint for push
@@ -68,7 +71,7 @@ jobs:
         {
           echo "### 🔍 Pylint Analysis"
           echo
-          if [ -n "$LINT_FAILED" ]; then
+          if [ -n "$LINT_FAILED" ] || [ -z "$LINT_PERFECT" ]; then
             echo "#### ❌ Check Failed - Score: $PYLINT_SCORE/10 (Required: 10/10)"
             echo
             echo "<details><summary>📋 Detailed Report</summary>"
@@ -125,7 +128,7 @@ jobs:
             });
           }
           
-          // Exit with error if lint failed for PR
-          if (process.env.LINT_FAILED === 'true') {
-            core.setFailed('Pylint score below 10/10');
+          // Exit with error if lint failed or not perfect for PR
+          if (process.env.LINT_FAILED === 'true' || process.env.LINT_PERFECT !== 'true') {
+            core.setFailed('Pylint score must be exactly 10/10');
           }
