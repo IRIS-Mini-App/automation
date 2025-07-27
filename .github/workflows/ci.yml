@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  # Trigger on push to master
+  # Trigger on push to main branches and features
   push:
-    branches: [ master ]
+    branches: [ master, 'feature/**' ]
   # Trigger on PRs to any branch
   pull_request:
     branches: [ '**' ]
