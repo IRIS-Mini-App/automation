@@ -28,7 +28,7 @@ def check_emulator() -> bool:
             text=True, 
             check=True
         )
-        devices: List[str] = [
+        devices = [
             line.strip() for line in result.stdout.splitlines()[1:]
             if line.strip()
         ]
