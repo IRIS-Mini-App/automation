@@ -68,12 +68,24 @@ jobs:
           
           // Determine status based on score
           const scoreNum = parseFloat(score);
-          const status = scoreNum >= 9.5 ? '✨' : scoreNum >= 8.0 ? '✅' : scoreNum >= 6.0 ? '⚠️' : '❌';
-          const scoreColor = scoreNum >= 9.5 ? '#2EA043' : scoreNum >= 8.0 ? '#44B244' : scoreNum >= 6.0 ? '#D29922' : '#F85149';
+          let status, statusText;
+          if (scoreNum >= 9.5) {
+            status = '✨';
+            statusText = 'Excellent';
+          } else if (scoreNum >= 8.0) {
+            status = '✅';
+            statusText = 'Good';
+          } else if (scoreNum >= 6.0) {
+            status = '⚠️';
+            statusText = 'Warning';
+          } else {
+            status = '❌';
+            statusText = 'Failed';
+          }
           
           const report = `## ${status} Pylint Quality Check
           
-          > **Score:** \`${score}/10\` <span style="color: ${scoreColor}">${'●'.repeat(Math.round(scoreNum))}</span>${'○'.repeat(10 - Math.round(scoreNum))}
+          > **Score:** \`${score}/10\` (${statusText})
           
           <details>
           <summary>📋 Detailed Issues</summary>
