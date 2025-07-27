@@ -3,8 +3,6 @@
 import logging
 from typing import Dict, Final
 
-from test_settings import DEBUG_MODE
-
 
 class LogConfig:
     """Centralized logging configuration."""

@@ -35,25 +35,32 @@ jobs:
           # Create a list of Python files
           find . -type f -name "*.py" > python_files.txt
           
-          # Run pylint and capture results
-          pylint \$(cat python_files.txt) --output-format=text --score=yes > pylint_report.txt || LINT_EXIT_CODE=\$?
+          # Run pylint first time for score
+          LINT_OUTPUT=$(pylint $(cat python_files.txt) --output-format=text --score=yes || true)
+          echo "$LINT_OUTPUT" > pylint_report.txt
           
-          # Get score if available
-          if [ -f pylint_report.txt ]; then
-            SCORE=\$(tail -n 2 pylint_report.txt | grep "rated at" | grep -oP "[\d.]+(?=/10)" || echo "0")
-            echo "score=\$SCORE" >> \$GITHUB_OUTPUT
-            echo "PYLINT_SCORE=\$SCORE" >> \$GITHUB_ENV
-          fi
+          # Extract score using more reliable pattern
+          SCORE=$(echo "$LINT_OUTPUT" | grep -oP "(?<=rated at )[0-9.]+(?=/10)" || echo "0")
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
+          echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
           
-          # Save detailed report for comment
-          pylint \$(cat python_files.txt) --output-format=text > pylint_details.txt || true
+          # Run pylint second time for detailed report
+          DETAIL_OUTPUT=$(pylint $(cat python_files.txt) --output-format=text || true)
+          echo "$DETAIL_OUTPUT" > pylint_details.txt
           
           # Format report for markdown
-          awk '{
-            gsub(/\x1B\[[0-9;]*[mK]/, "")
-            if (\$0 ~ /\*+/) print "\n### " substr(\$0, index(\$0, "Module"))
-            else if (length(\$0) > 0) print "- " \$0
-          }' pylint_details.txt > pylint_report_formatted.txt
+          awk '
+            BEGIN { in_module = 0 }
+            {
+              gsub(/\x1B\[[0-9;]*[mK]/, "")
+              if ($0 ~ /^\*+/) {
+                in_module = 1
+                print "\n### " substr($0, index($0, "Module"))
+              }
+              else if (in_module && length($0) > 0) {
+                print "- " $0
+              }
+            }' pylint_details.txt > pylint_report_formatted.txt
           
       - name: Post Results
         if: always()

@@ -1,15 +1,17 @@
-from typing import Optional
-from appium.webdriver.common.appiumby import AppiumBy
 from appium.webdriver.webdriver import WebDriver
-from utils.custom_keywords import wait_for_visible, get_text
 from utils.logger import logger
 
 
 class DishDetailScreen:
-    # Locators
+    """Page object for the Dish Detail screen."""
     
     def __init__(self, driver: WebDriver):
+        """Initialize the dish detail screen.
+        
+        Args:
+            driver: The WebDriver instance to control the screen
+        """
         self.driver = driver
         logger.debug("Initialized DishDetailScreen")
 
-    # Screen Action Methods    
+    # Screen Action Methods placeholder for future implementation    

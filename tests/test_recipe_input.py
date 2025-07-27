@@ -1,12 +1,19 @@
+"""Tests for the recipe input flow."""
+
 from appium.webdriver.webdriver import WebDriver
 from assertpy import assert_that
 
 from screens.ingredient_selection_screen import IngredientSelectionScreen
-from utils.logger import logger
 from utils.constants import INGREDIENT_SELECTION_TITLE
+from utils.logger import logger
 
 
 def test_valid_input_flow(driver: WebDriver):
+    """Test valid input flow for recipe ingredients.
+    
+    Args:
+        driver: WebDriver instance for the test
+    """
     logger.info("Starting test_valid_input_flow")
     
     ingredients_screen = IngredientSelectionScreen(driver)

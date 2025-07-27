@@ -1,4 +1,3 @@
-from typing import Optional
 from appium.webdriver.common.appiumby import AppiumBy
 from appium.webdriver.webdriver import WebDriver
 from utils.custom_keywords import wait_for_visible
@@ -7,7 +6,7 @@ from utils.logger import logger
 
 class IngredientSelectionScreen:
     # Locators
-    TITLE = (AppiumBy.XPATH, f"//android.view.View[contains(@text, 'Select') or contains(@content-desc, 'Select')]")
+    TITLE = (AppiumBy.XPATH, "//android.view.View[contains(@text, 'Select') or contains(@content-desc, 'Select')]")
 
     def __init__(self, driver: WebDriver):
         self.driver = driver
