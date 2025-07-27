@@ -32,51 +32,91 @@ jobs:
     - name: Run pylint for PR
       if: github.event_name == 'pull_request'
       id: pylint_pr
+      continue-on-error: true
       run: |
-        # For PR, require 10/10 score
-        pylint utils pages tests config conftest.py test_settings.py --output-format=parseable --fail-under=10.0 > pylint_report.txt
+        # Run pylint with different formats
+        pylint utils pages tests config conftest.py test_settings.py --output-format=json > pylint_json.json || true
+        pylint utils pages tests config conftest.py test_settings.py --output-format=colorized > pylint_details.txt || true
+        pylint utils pages tests config conftest.py test_settings.py --output-format=text --score=yes > pylint_report.txt || true
+        
+        # Check if score meets requirement
+        SCORE=$(tail -n 2 pylint_report.txt | grep "rated at" | grep -oP "[\d.]+(?=/10)")
+        echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
+        if (( $(echo "$SCORE < 10" | bc -l) )); then
+          echo "LINT_FAILED=true" >> $GITHUB_ENV
+        fi
         
     - name: Run pylint for push
       if: github.event_name == 'push'
       id: pylint_push
       run: |
         # For push to master, just collect results
-        pylint utils pages tests config conftest.py test_settings.py --output-format=parseable > pylint_report.txt || true
+        pylint utils pages tests config conftest.py test_settings.py --output-format=colorized > pylint_report.txt || true
+        
+    - name: Generate Detailed Report
+      if: github.event_name == 'pull_request'
+      run: |
+        {
+          echo "### Ì¥ç Pylint Analysis"
+          echo
+          if [ -n "$LINT_FAILED" ]; then
+            echo "#### ‚ùå Check Failed - Score: $PYLINT_SCORE/10"
+            echo
+            echo "<details><summary>Ì≥ã Detailed Report</summary>"
+            echo
+            echo "\`\`\`"
+            cat pylint_details.txt
+            echo "\`\`\`"
+            echo
+            echo "</details>"
+            echo
+            echo "#### Ì¥ß How to fix:"
+            echo "1. Run pylint locally to see issues in real-time:"
+            echo "   \`\`\`bash"
+            echo "   pylint utils pages tests config conftest.py test_settings.py"
+            echo "   \`\`\`"
+            echo "2. Common fixes:"
+            echo "   - Add docstrings for missing documentation"
+            echo "   - Fix line length issues (max 100 chars)"
+            echo "   - Handle specific exceptions instead of broad ones"
+            echo "   - Remove unused imports and variables"
+            echo "   - Fix code formatting issues"
+          else
+            echo "#### ‚úÖ All checks passed - Score: $PYLINT_SCORE/10"
+            echo
+            echo "Great job! Code meets all quality standards."
+          fi
+        } > lint_report.md
         
     - name: Comment Results
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
-          let pylintOutput;
+          let report;
           try {
-            pylintOutput = fs.readFileSync('pylint_report.txt', 'utf8');
+            report = fs.readFileSync('lint_report.md', 'utf8');
           } catch (error) {
-            pylintOutput = 'Failed to read pylint results';
+            report = '### ‚ö†Ô∏è Failed to generate lint report';
           }
           
-          const isPR = context.eventName === 'pull_request';
-          const header = isPR ? '## Pylint Results (Required Score: 10/10)' : '## Pylint Results';
-          const body = `${header}
-          \`\`\`
-          ${pylintOutput}
-          \`\`\`
-          ${isPR ? '\n\n**Note:** PR checks will fail if score is below 10/10' : ''}
-          `;
-          
-          if (isPR) {
+          if (context.eventName === 'pull_request') {
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: body
+              body: report
             });
           } else {
-            // For push to master, create a commit comment
             await github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: context.sha,
-              body: body
+              body: report
             });
+          }
+          
+          // Exit with error if lint failed for PR
+          if (process.env.LINT_FAILED === 'true') {
+            core.setFailed('Pylint score below 10/10');
           }
