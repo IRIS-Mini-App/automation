@@ -1,4 +1,4 @@
-name: CI
+name: CI - Auto Fix & Quality Check
 
 on:
   # Trigger on push to master
@@ -9,7 +9,8 @@ on:
     branches: [ '**' ]
 
 jobs:
-  lint:
+  lint-and-fix:
+    name: 🔧 Auto-fix Lint Issues
     runs-on: ubuntu-latest
     # Add permissions needed for PR comments
     permissions:
@@ -29,33 +30,64 @@ jobs:
         pip install -r requirements.txt
         pip install pylint
         
-    - name: Run pylint for PR
+    - name: Auto-fix and Check Lint
       if: github.event_name == 'pull_request'
-      id: pylint_pr
+      id: lint_check
       continue-on-error: true
       run: |
-        # Run pylint with different formats
-        pylint utils pages tests config conftest.py test_settings.py --output-format=json > pylint_json.json || true
-        pylint utils pages tests config conftest.py test_settings.py --output-format=colorized > pylint_details.txt || true
-        pylint utils pages tests config conftest.py test_settings.py --output-format=text --score=yes > pylint_report.txt || true
-        
-        # Check if score meets requirement
+        # Install additional tools
+        pip install autoflake isort black
+
+        # Create a list of Python files
+        find . -type f -name "*.py" > python_files.txt
+
+        # 1. Remove unused imports and variables
+        while IFS= read -r file; do
+          autoflake --remove-all-unused-imports --remove-unused-variables --in-place "$file"
+        done < python_files.txt
+
+        # 2. Sort imports
+        isort --profile black $(cat python_files.txt)
+
+        # 3. Format code
+        black --line-length 100 $(cat python_files.txt)
+
+        # 4. Run pylint to check results
+        pylint $(cat python_files.txt) --output-format=json > pylint_json.json || true
+        pylint $(cat python_files.txt) --output-format=colorized > pylint_details.txt || true
+        pylint $(cat python_files.txt) --output-format=text --score=yes > pylint_report.txt || true
+
+        # Get score and changes
         SCORE=$(tail -n 2 pylint_report.txt | grep "rated at" | grep -oP "[\d.]+(?=/10)")
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         
-        # Compare with 10.0 using bc for decimal comparison
-        if [ $(echo "$SCORE < 10.0" | bc -l) -eq 1 ]; then
-          echo "LINT_FAILED=true" >> $GITHUB_ENV
-          echo "Score $SCORE is below 10.0"
-        elif [ $(echo "$SCORE > 10.0" | bc -l) -eq 1 ]; then
-          echo "LINT_FAILED=true" >> $GITHUB_ENV
-          echo "Score $SCORE is above 10.0"
-        elif [ $(echo "$SCORE == 10.0" | bc -l) -eq 1 ]; then
-          echo "LINT_PERFECT=true" >> $GITHUB_ENV
-          echo "Score is exactly 10.0"
+        # Check if files were modified
+        if [[ -n $(git status -s) ]]; then
+          echo "CHANGES_MADE=true" >> $GITHUB_ENV
+          
+          # Configure Git
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Create new branch with fixes
+          BRANCH_NAME="lint-fixes/$(date +%s)"
+          git checkout -b $BRANCH_NAME
+          
+          # Commit and push changes
+          git add .
+          git commit -m "🤖 Auto-fix lint issues
+          
+          - Remove unused imports and variables
+          - Sort imports
+          - Format code according to PEP 8
+          - Current pylint score: $SCORE/10"
+          
+          git push origin $BRANCH_NAME
+          
+          # Save branch name for PR creation
+          echo "LINT_BRANCH=$BRANCH_NAME" >> $GITHUB_ENV
         else
-          echo "LINT_FAILED=true" >> $GITHUB_ENV
-          echo "Score comparison error"
+          echo "No lint issues to fix automatically"
         fi
         
     - name: Run pylint for push
@@ -65,40 +97,66 @@ jobs:
         # For push to master, just collect results
         pylint utils pages tests config conftest.py test_settings.py --output-format=colorized > pylint_report.txt || true
         
-    - name: Generate Detailed Report
-      if: github.event_name == 'pull_request'
-      run: |
-        {
-          echo "### 🔍 Pylint Analysis"
-          echo
-          if [ -n "$LINT_FAILED" ] || [ -z "$LINT_PERFECT" ]; then
-            echo "#### ❌ Check Failed - Score: $PYLINT_SCORE/10 (Required: 10/10)"
-            echo
-            echo "<details><summary>📋 Detailed Report</summary>"
-            echo
-            echo "\`\`\`"
-            cat pylint_details.txt
-            echo "\`\`\`"
-            echo
-            echo "</details>"
-            echo
-            echo "#### 🔧 How to fix:"
-            echo "1. Run pylint locally to see issues in real-time:"
-            echo "   \`\`\`bash"
-            echo "   pylint utils pages tests config conftest.py test_settings.py"
-            echo "   \`\`\`"
-            echo "2. Common fixes:"
-            echo "   - Add docstrings for missing documentation"
-            echo "   - Fix line length issues (max 100 chars)"
-            echo "   - Handle specific exceptions instead of broad ones"
-            echo "   - Remove unused imports and variables"
-            echo "   - Fix code formatting issues"
-          else
-            echo "#### ✅ All checks passed - Score: 10/10"
-            echo
-            echo "Great job! Code meets all quality standards."
-          fi
-        } > lint_report.md
+    - name: Create Fix PR
+      if: ${{ github.event_name == 'pull_request' && env.CHANGES_MADE == 'true' }}
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fixBranch = process.env.LINT_BRANCH;
+          const score = process.env.PYLINT_SCORE;
+          
+          // Create PR with fixes
+          const { data: pr } = await github.rest.pulls.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🤖 Auto-fix lint issues',
+            head: fixBranch,
+            base: context.payload.pull_request.head.ref,
+            body: `## 🔧 Automated Lint Fixes
+
+              I've automatically fixed some lint issues in your code:
+              - Removed unused imports and variables
+              - Sorted imports
+              - Formatted code according to PEP 8
+              
+              ### Current Score: ${score}/10
+              
+              <details><summary>📋 Detailed Report</summary>
+              
+              \`\`\`
+              ${fs.readFileSync('pylint_details.txt', 'utf8')}
+              \`\`\`
+              </details>
+              
+              Please review the changes and merge if they look good.
+              
+              Note: Some issues may require manual fixes:
+              - Add missing docstrings
+              - Fix complex logic issues
+              - Handle specific exceptions
+              `
+          });
+          
+          // Comment on original PR
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: `### 🔧 Lint Auto-fix
+            
+            I've created a new PR #${pr.number} with automatic lint fixes.
+            Please review and merge those changes.
+            
+            Current pylint score: ${score}/10
+            
+            <details><summary>📋 Remaining Issues</summary>
+            
+            \`\`\`
+            ${fs.readFileSync('pylint_details.txt', 'utf8')}
+            \`\`\`
+            </details>
+            `
+          });
         
     - name: Comment Results
       uses: actions/github-script@v6
