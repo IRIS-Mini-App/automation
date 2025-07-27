@@ -1,38 +1,29 @@
-"""Test suite for the recipe input functionality."""
-
-
+"""Tests for the recipe input flow."""
 
 from appium.webdriver.webdriver import WebDriver
 from assertpy import assert_that
 
-from pages.ingredients_input_page import IngredientsInputPage
+from screens.ingredient_selection_screen import IngredientSelectionScreen
+from utils.constants import INGREDIENT_SELECTION_TITLE
 from utils.logger import logger
 
 
-def test_valid_input_flow(driver: WebDriver) -> None:
-    """Test the basic input flow with valid data.
-    
-    This test verifies:
-    1. Page loads successfully
-    2. Title is displayed correctly
-    3. Title contains expected text
+def test_valid_input_flow(driver: WebDriver):
+    """Test valid input flow for recipe ingredients.
     
     Args:
-        driver: WebDriver fixture
+        driver: WebDriver instance for the test
     """
     logger.info("Starting test_valid_input_flow")
     
-    # Initialize page object
-    ingredients_page = IngredientsInputPage(driver)
+    ingredients_screen = IngredientSelectionScreen(driver)
+    title = ingredients_screen.get_screen_title()
+    expected_title = INGREDIENT_SELECTION_TITLE
     
-    # Get and verify page title
-    title = ingredients_page.get_ingredients_page_title()
-    expected_title = 'Select Main Ingredients'
-    
-    assert_that(title, "Page title")\
+    assert_that(title, "Screen title")\
         .is_not_none()\
         .is_type_of(str)\
-        .contains(expected_title)\
-        .is_length(len(expected_title))
-        
-    logger.info("Page title verified successfully")
+        .is_length(len(expected_title))\
+        .contains(expected_title)
+
+    logger.info("Screen title verified successfully")

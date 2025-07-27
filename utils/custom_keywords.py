@@ -1,18 +1,4 @@
-"""Custom keywords for UI automatio    try:
-        wait = WebDriverWait(
-            driver,
-            timeout,
-            poll_frequency=poll_frequency
-        )
-        element = wait.until(EC.visibility_of_element_located(locator))
-        logger.debug(f"Element found and visible: {locator}")
-        return element
-        
-    except TimeoutException:
-        logger.error(f"Element not visible within {timeout}s: {locator}")
-        raise
-        
-    except Exception as e:m WebDriver."""
+"""Custom keywords for mobile UI automation."""
 
 from typing import List, Tuple, Optional
 
@@ -27,12 +13,7 @@ from utils.logger import logger
 LocatorType = Tuple[str, str]
 
 
-def wait_for_visible(
-    driver: WebDriver,
-    locator: LocatorType,
-    timeout: int = 10,
-    poll_frequency: float = 0.2
-) -> Optional[WebElement]:
+def wait_for_visible(driver: WebDriver, locator: LocatorType, timeout: int = 10, poll_frequency: float = 0.2) -> Optional[WebElement]:
     """Wait for an element to be visible with fluent wait.
     
     Args:
@@ -47,24 +28,11 @@ def wait_for_visible(
     Raises:
         TimeoutException: If element is not visible within timeout
     """
-    try:
-        wait = WebDriverWait(
-            driver,
-            timeout,
-            poll_frequency=poll_frequency
-        )
-        element = wait.until(EC.visibility_of_element_located(locator))
-        logger.debug(f"Element found and visible: {locator}")
-        return element
+    wait = WebDriverWait(driver, timeout, poll_frequency=poll_frequency)
+    element = wait.until(EC.visibility_of_element_located(locator))
+    logger.debug(f"Element found and visible: {locator}")
+    return element
         
-    except TimeoutException:
-        logger.error(f"Element not visible within {timeout}s: {locator}")
-        raise
-        
-    except Exception as e:
-        logger.error(f"Error waiting for element {locator}: {str(e)}")
-        raise
-
 
 def get_element(driver: WebDriver, locator: LocatorType) -> WebElement:
     """Get a single element, raising an exception if not found.
@@ -79,14 +47,9 @@ def get_element(driver: WebDriver, locator: LocatorType) -> WebElement:
     Raises:
         NoSuchElementException: If element is not found
     """
-    try:
-        element = driver.find_element(*locator)
-        logger.debug(f"Found element: {locator}")
-        return element
-        
-    except NoSuchElementException:
-        logger.error(f"Element not found: {locator}")
-        raise
+    element = driver.find_element(*locator)
+    logger.debug(f"Found element: {locator}")
+    return element
 
 
 def get_elements(driver: WebDriver, locator: LocatorType) -> List[WebElement]:
