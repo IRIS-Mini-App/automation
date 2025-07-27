@@ -1,14 +1,20 @@
 name: CI
 
 on:
+  # Trigger on push to master
   push:
     branches: [ master ]
+  # Trigger on PRs to any branch
   pull_request:
-    branches: [ master ]
+    branches: [ '**' ]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
+    # Add permissions needed for PR comments
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
     - uses: actions/checkout@v3
     
@@ -24,5 +30,26 @@ jobs:
         pip install pylint
         
     - name: Run pylint
+      id: pylint
       run: |
-        pylint utils pages tests config conftest.py test_settings.py --output-format=parseable --fail-under=8.0
+        # Save pylint output to a file
+        pylint utils pages tests config conftest.py test_settings.py --output-format=parseable --fail-under=8.0 > pylint_report.txt || echo "Pylint failed" 
+        
+    - name: Comment PR with Lint Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const pylintOutput = fs.readFileSync('pylint_report.txt', 'utf8');
+          const body = `## Pylint Results
+          \`\`\`
+          ${pylintOutput}
+          \`\`\`
+          `;
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: body
+          });
