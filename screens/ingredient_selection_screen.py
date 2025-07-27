@@ -6,7 +6,10 @@ from utils.logger import logger
 
 class IngredientSelectionScreen:
     # Locators
-    TITLE = (AppiumBy.XPATH, "//android.view.View[contains(@text, 'Select') or contains(@content-desc, 'Select')]")
+    TITLE = (
+        AppiumBy.XPATH, 
+        "//android.view.View[contains(@text, 'Select') or contains(@content-desc, 'Select')]"
+    )
 
     def __init__(self, driver: WebDriver):
         self.driver = driver
@@ -26,6 +29,7 @@ class IngredientSelectionScreen:
             TimeoutException: If title element is not found within timeout
         """
         logger.debug("Getting ingredients screen title")
-        screen_title = wait_for_visible(self.driver, self.TITLE, timeout=timeout).get_attribute("content-desc")
+        element = wait_for_visible(self.driver, self.TITLE, timeout=timeout)
+        screen_title = element.get_attribute("content-desc")
         logger.debug(f"Found screen title: {screen_title}")
         return screen_title
