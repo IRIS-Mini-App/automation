@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  # Trigger on push to master
+  push:
+    branches: [ master ]
+  # Trigger on PRs to any branch
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  quality:
+    name: Code Quality
+    uses: ./.github/workflows/lint.yml
