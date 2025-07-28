@@ -115,7 +115,8 @@ def create_driver(reinstall_app: bool = False) -> WebDriver:
             command_executor=f'http://{APPIUM_HOST}:{APPIUM_PORT}',
             options=options
         )
-        logger.debug("Successfully created Appium driver")
+        session_id = driver.session_id
+        logger.info(f"Created new WebDriver session with ID: {session_id}")
         return driver
     except WebDriverException as e:
         logger.error(f"Failed to create driver: {e}")

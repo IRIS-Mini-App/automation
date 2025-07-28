@@ -2,6 +2,7 @@
 
 import time
 from typing import Generator
+import pytest
 
 import pytest
 from appium.webdriver.webdriver import WebDriver
@@ -9,15 +10,34 @@ from appium.webdriver.webdriver import WebDriver
 from utils.driver_factory import create_driver
 from utils.appium_launcher import start_appium, stop_appium
 from utils.logger import logger
-from utils.test_helpers import check_emulator, format_duration
+from utils.test_helpers import check_emulator, format_duration, ScreenValidator
 from test_settings import IS_REINSTALL_APP
 
 logger.debug("conftest.py LOADED")
 
+# Global validator instance
+screen_validator = ScreenValidator()
+
 @pytest.fixture(scope="session", autouse=True)
-def handle_appium_server(request) -> None:
+def validate_code(request) -> None:
+    """Session fixture to validate code before any tests run."""
+    logger.debug("Starting code validation...")
+    try:
+        screen_validator.validate_all_test_files()
+        if screen_validator.validation_result["errors"]:
+            error_msg = screen_validator.format_validation_errors()
+            if error_msg:  # Only fail if we have an actual error message
+                pytest.fail(str(error_msg))
+    except Exception as e:
+        logger.error(f"Failed to validate test files: {str(e)}")
+        raise
+    logger.debug("Code validation completed successfully")
+
+@pytest.fixture(scope="session", autouse=True)
+def handle_appium_server(validate_code, request) -> None:
     """Session fixture to manage Appium server lifecycle.
     Args:
+        validate_code: Previous fixture that validates code
         request: PyTest request object for fixture management
     """
     logger.debug("handle_appium_server fixture STARTING")
@@ -71,7 +91,7 @@ def webdriver() -> Generator[WebDriver, None, None]:
         test_driver.quit()
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_runtest_setup(item) -> None:
+def pytest_runtest_setup(item):
     """Set up timing for test execution.
     Args:
         item: PyTest item object representing the test
