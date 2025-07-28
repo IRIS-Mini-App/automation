@@ -4,6 +4,8 @@ from utils.custom_keywords import wait_for_visible
 from utils.logger import logger
 from utils.constants import SPLASH_APP_TITLE, SPLASH_APP_SLOGAN
 
+DEFAULT_TIMEOUT = 30  # Default timeout in seconds
+
 
 class SplashScreen:
     # Locators
@@ -12,10 +14,11 @@ class SplashScreen:
 
     def __init__(self, driver: WebDriver):
         self.driver = driver
+        logger.info("Navigating to Splash Screen")
         logger.debug("Initialized SplashScreen")
     
     # Screen Action Methods
-    def app_title_and_slogan_are_displayed(self, timeout: int = 10) -> bool:
+    def app_title_and_slogan_are_displayed(self, timeout: int = DEFAULT_TIMEOUT) -> bool:
         """Check if the app title and slogan are displayed on the splash screen.
 
         Args:

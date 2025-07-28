@@ -134,9 +134,16 @@ class Logger:
         file_handler.setFormatter(formatter)
         console_handler.setFormatter(formatter)
 
+        # Remove all existing handlers
+        if cls._logger.hasHandlers():
+            cls._logger.handlers.clear()
+
         # Add handlers to logger
         cls._logger.addHandler(file_handler)
         cls._logger.addHandler(console_handler)
+        
+        # Prevent log propagation to avoid duplicate logs
+        cls._logger.propagate = False
 
     @classmethod
     def debug(cls, message):
