@@ -1,9 +1,9 @@
-from time import sleep
 from appium.webdriver.webdriver import WebDriver
+from appium.webdriver.common.appiumby import AppiumBy
+
 from screens.dish_detail_screen import DishDetailScreen
 from utils.custom_keywords import click_element, wait_for_visible
 from utils.logger import logger
-from appium.webdriver.common.appiumby import AppiumBy
 
 DEFAULT_TIMEOUT = 30  
 
@@ -24,7 +24,7 @@ class DishListScreen:
         """
         self.driver = driver
         logger.info("Waiting for Dish List Screen to load")
-        sleep(60)
+        wait_for_visible(self.driver, self.FOUND_RECIPES_MESSAGE, timeout=60, is_scrollable=False)
         logger.info("Navigating to Dish List Screen")
         logger.debug("Initializing DishListScreen")
     

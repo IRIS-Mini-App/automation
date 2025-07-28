@@ -1,21 +1,50 @@
 """Custom keywords for mobile UI automation."""
 
+from time import time, sleep
 from typing import List, Tuple, Optional
 
 from appium.webdriver.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from appium.webdriver.common.appiumby import AppiumBy
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.common.exceptions import TimeoutException
 from utils.logger import logger
-from time import time, sleep
 
 LocatorType = Tuple[str, str]
 
 
+def scroll_down(driver: WebDriver) -> None:
+    """Perform a scroll down action on the screen.
+    
+    Args:
+        driver: WebDriver instance to perform the scroll
+    """
+    window_size = driver.get_window_size()
+    screen_height = window_size['height']
+    screen_width = window_size['width']
+    
+    # Calculate scroll positions
+    start_y = int(screen_height * 0.7)
+    end_y = int(screen_height * 0.3)
+    center_x = screen_width // 2
+
+    try:
+        # Perform scroll
+        driver.swipe(
+            start_x=center_x,
+            start_y=start_y,
+            end_x=center_x,
+            end_y=end_y,
+            duration=1000
+        )
+        logger.debug(f"Performed scroll: {start_y} -> {end_y}")
+        sleep(1)  # Wait for scroll to complete
+    except Exception as e:
+        logger.error(f"Error during scroll: {str(e)}")
+        raise
+
 def wait_for_visible(driver: WebDriver, locator: LocatorType, 
-                   timeout: int = 10, poll_frequency: float = 0.2) -> Optional[WebElement]:
+                   timeout: int = 10, poll_frequency: float = 0.2,
+                   is_scrollable: bool = True) -> Optional[WebElement]:
     """Wait for an element to be visible with fluent wait. First tries to find the element without
     scrolling, then scrolls if necessary within the timeout period until the element is found and visible.
     
@@ -24,6 +53,7 @@ def wait_for_visible(driver: WebDriver, locator: LocatorType,
         locator: Tuple of (by, value) e.g., ("xpath", "//android.view.View")
         timeout: Maximum time to wait in seconds
         poll_frequency: How often to poll in seconds
+        is_scrollable: Whether to scroll to find element if not visible initially
         
     Returns:
         WebElement if found and visible
@@ -31,63 +61,36 @@ def wait_for_visible(driver: WebDriver, locator: LocatorType,
     Raises:
         TimeoutException: If element is not visible within timeout
     """
-    
     start_time = time()
     end_time = start_time + timeout
     attempts = 0
-    max_attempts = 10  # Tăng số lần thử
-    
-    window_size = driver.get_window_size()
-    screen_height = window_size['height']
-    screen_width = window_size['width']
+    max_attempts = 10
 
-    # First try to find the element without scrolling
-    try:
-        element = driver.find_element(*locator)
-        if element.is_displayed():
-            logger.debug(f"Element found and visible without scrolling: {locator}")
-            return element
-    except:
-        pass
-
-    # If element not found or not visible, try scrolling
-    while time() < end_time and attempts < max_attempts:
+    while time() < end_time:
         try:
             element = driver.find_element(*locator)
             if element.is_displayed():
-                logger.debug(f"Element found and visible after scrolling: {locator}")
+                logger.debug(f"Element found and visible: {locator}")
                 return element
         except:
             pass
 
-        logger.debug(f"Scroll attempt {attempts + 1}")
-        
-        # Calculate scroll positions
-        start_y = int(screen_height * 0.7)
-        end_y = int(screen_height * 0.3)
-        center_x = screen_width // 2
+        if not is_scrollable or attempts >= max_attempts:
+            sleep(poll_frequency)
+            continue
 
+        logger.debug(f"Scroll attempt {attempts + 1}")
         try:
-            # Perform scroll
-            driver.swipe(
-                start_x=center_x,
-                start_y=start_y,
-                end_x=center_x,
-                end_y=end_y,
-                duration=1000
-            )
-            logger.debug(f"Performed scroll: {start_y} -> {end_y}")
-            
+            scroll_down(driver)
             attempts += 1
-            sleep(1)  # Wait for scroll to complete
-            
+            sleep(poll_frequency)  # Wait after scroll
         except Exception as e:
-            logger.error(f"Error during scroll: {str(e)}")
+            logger.error(f"Failed to scroll: {str(e)}")
             attempts += 1
-    
-    # If we get here, we've timed out
+            sleep(poll_frequency)  # Wait after error
+
     raise TimeoutException(f"Element not found or not visible after {timeout} seconds: {locator}")
-        
+
 
 def get_element(driver: WebDriver, locator: LocatorType) -> WebElement:
     """Get a single element, raising an exception if not found.
@@ -145,7 +148,29 @@ def get_elements(driver: WebDriver, locator: LocatorType) -> List[WebElement]:
         
     logger.debug(f"Found {len(elements)} elements with locator: {locator}")
     return elements
+    window_size = driver.get_window_size()
+    screen_height = window_size['height']
+    screen_width = window_size['width']
+    
+    # Calculate scroll positions
+    start_y = int(screen_height * 0.7)
+    end_y = int(screen_height * 0.3)
+    center_x = screen_width // 2
 
+    try:
+        # Perform scroll
+        driver.swipe(
+            start_x=center_x,
+            start_y=start_y,
+            end_x=center_x,
+            end_y=end_y,
+            duration=1000
+        )
+        logger.debug(f"Performed scroll: {start_y} -> {end_y}")
+        sleep(1)  # Wait for scroll to complete
+    except Exception as e:
+        logger.error(f"Error during scroll: {str(e)}")
+        raise
 
 def swipe_seek_bar(driver: WebDriver, locator: LocatorType, start_percent: float = 0.5, 
                   end_percent: float = 0.95, timeout: int = 10) -> None:
